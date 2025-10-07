@@ -1,0 +1,38 @@
+# ----------------------------------------------------------------------
+# 1. Archivos Generados por el Entorno de Desarrollo (VS Code en Windows)
+# ----------------------------------------------------------------------
+.vscode/                      # Configuraciones específicas de usuario de VS Code
+.DS_Store                     # Archivos de metadatos de macOS (si trabajas en paralelo)
+Thumbs.db                     # Caché de miniaturas de Windows
+
+# ----------------------------------------------------------------------
+# 2. Variables de Entorno y Secretos
+# ----------------------------------------------------------------------
+.env                          # Contiene tokens, contraseñas y claves privadas
+secrets/
+# ----------------------------------------------------------------------
+# 3. Directorios y Archivos de Dependencias
+# ----------------------------------------------------------------------
+# Generalmente no aplica para un proyecto simple de Docker/Telegraf,
+# pero es buena práctica si añades scripts o código auxiliar.
+node_modules/
+venv/
+__pycache__/
+*.pyc
+*.o
+*.so
+
+# ----------------------------------------------------------------------
+# 4. Archivos de Logs y Temporales
+# ----------------------------------------------------------------------
+*.log
+*.tmp
+temp/
+/data/                        # Si usas un volumen local para persistir datos fuera de Docker
+
+# ----------------------------------------------------------------------
+# 5. Enviroment files to set InfluxDB secutiry settings
+# ----------------------------------------------------------------------
+.env.influxdb2-admin-username
+.env.influxdb2-admin-password
+.env.influxdb2-admin-token

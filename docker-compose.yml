@@ -1,0 +1,78 @@
+services:
+  # InfluxDB OSS 2
+  influxdb2:
+    image: influxdb:2.7.12
+    container_name: Influx2
+    restart: always
+    ports:
+      - 8086:8086
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      # The container's path to the file that contains th user name for the initial user
+      DOCKER_INFLUXDB_INIT_USERNAME_FILE: /run/secrets/influxdb2-admin-username
+      # The container's path to the faile that contains the password for the initial user
+      DOCKER_INFLUXDB_INIT_PASSWORD_FILE: /run/secrets/influxdb2-admin-password
+      # The container's path to the file that contains a token to use for initial Operator Toke
+      # If not defined, InfluxDB generates one automatically.
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN_FILE: /run/secrets/influxdb2-admin-token
+      # Settings for the initial org and bucket
+      DOCKER_INFLUXDB_INIT_ORG: DOTRONIQ #${DOCKER_INFLUXDB_INIT_ORG}
+      DOCKER_INFLUXDB_INIT_BUCKET: main #${DOCKER_INFLUXDB_INIT_BUCKET}
+  # Secret files
+    secrets:
+      - influxdb2-admin-username
+      - influxdb2-admin-password
+      - influxdb2-admin-token
+    volumes:
+      - type: volume
+        source: influxdb2-data
+        target: /var/lib/influxdb2
+      - type: volume
+        source: influxdb2-config
+        target: /etc/influxdb2
+    networks:
+      - iot-network
+    # healthcheck:
+    #   test: ["CMD", "influxdb2", "ping"]
+    #   interval: 10s
+    #   timeout: 5s
+    #   retries: 5
+
+  telegraf:
+    image: telegraf:1.36.2
+    container_name: telegraf
+    command: >
+      sh -c "export INFLUX_TOKEN=$$(cat /run/secrets/influxdb2-admin-token) && exec telegraf"
+    environment:
+      # INFLUX_TOKEN_FILE: /run/secrets/influxdb2-admin-token
+      INFLUXDB_ORG: DOTRONIQ
+      INFLUXDB_BUCKET: main
+    secrets:
+      - influxdb2-admin-token
+    volumes:
+    # Mount configurastion file
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+    depends_on:
+      - influxdb2
+      # influxdb2:
+      #   condition: service_healthy
+    restart: always
+    networks:
+      - iot-network
+
+
+secrets:
+  influxdb2-admin-username:
+    file: ./secrets/.env.influxdb2-admin-username
+  influxdb2-admin-password:
+    file: ./secrets/.env.influxdb2-admin-password
+  influxdb2-admin-token:
+    file: ./secrets/.env.influxdb2-admin-token
+
+volumes:
+  influxdb2-data:
+  influxdb2-config:
+
+networks:
+  iot-network:
+    driver: bridge
