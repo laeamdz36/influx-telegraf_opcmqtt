@@ -8,7 +8,7 @@ Thumbs.db                     # Caché de miniaturas de Windows
 # ----------------------------------------------------------------------
 # 2. Variables de Entorno y Secretos
 # ----------------------------------------------------------------------
-.env                          # Contiene tokens, contraseñas y claves privadas
+.env
 secrets/
 # ----------------------------------------------------------------------
 # 3. Directorios y Archivos de Dependencias

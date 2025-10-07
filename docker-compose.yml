@@ -7,7 +7,7 @@ services:
     ports:
       - 8086:8086
     environment:
-      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_MODE: ${INFLUXDB_INIT_MODE}
       # The container's path to the file that contains th user name for the initial user
       DOCKER_INFLUXDB_INIT_USERNAME_FILE: /run/secrets/influxdb2-admin-username
       # The container's path to the faile that contains the password for the initial user
@@ -16,8 +16,8 @@ services:
       # If not defined, InfluxDB generates one automatically.
       DOCKER_INFLUXDB_INIT_ADMIN_TOKEN_FILE: /run/secrets/influxdb2-admin-token
       # Settings for the initial org and bucket
-      DOCKER_INFLUXDB_INIT_ORG: DOTRONIQ #${DOCKER_INFLUXDB_INIT_ORG}
-      DOCKER_INFLUXDB_INIT_BUCKET: main #${DOCKER_INFLUXDB_INIT_BUCKET}
+      DOCKER_INFLUXDB_INIT_ORG: ${INFLUXDB_INIT_ORG}
+      DOCKER_INFLUXDB_INIT_BUCKET: ${INFLUXDB_INIT_BUCKET}
   # Secret files
     secrets:
       - influxdb2-admin-username
@@ -45,8 +45,8 @@ services:
       sh -c "export INFLUX_TOKEN=$$(cat /run/secrets/influxdb2-admin-token) && exec telegraf"
     environment:
       # INFLUX_TOKEN_FILE: /run/secrets/influxdb2-admin-token
-      INFLUXDB_ORG: DOTRONIQ
-      INFLUXDB_BUCKET: main
+      INFLUXDB_ORG: ${INFLUXDB_INIT_ORG}
+      INFLUXDB_BUCKET: ${INFLUXDB_INIT_BUCKET}
     secrets:
       - influxdb2-admin-token
     volumes:
