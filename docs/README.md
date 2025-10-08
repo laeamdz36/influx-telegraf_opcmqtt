@@ -20,3 +20,14 @@ General structure:
     - tag_set: A set of tags key-value to index the values
     - filed_set: The set of values or data that is being measured
     - timestamp: The date and time of the data in Unix format in nanoseconds
+
+## Docker compose file
+
+Docker compose file will export the needed variables for the telegraf.config file from the
+``.env`` file
+
+> Variables
+    - INFLUXDB_INIT_MODE=setup # Mode needed to init influxdb instance with initial settings
+    - INFLUXDB_INIT_ORG=MyOrg # Organization for set influxdb
+    - INFLUXDB_INIT_BUCKET=MyInitialBucket # initial bucket name
+    - MQTT_BROKER_URL=tcp://192.168.0.1:1883 # the ip for the MQTT Broker

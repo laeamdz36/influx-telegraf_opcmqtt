@@ -44,7 +44,7 @@ services:
     command: >
       sh -c "export INFLUX_TOKEN=$$(cat /run/secrets/influxdb2-admin-token) && exec telegraf"
     environment:
-      # INFLUX_TOKEN_FILE: /run/secrets/influxdb2-admin-token
+      MQTT_BROKER: ${MQTT_BROKER_URL}
       INFLUXDB_ORG: ${INFLUXDB_INIT_ORG}
       INFLUXDB_BUCKET: ${INFLUXDB_INIT_BUCKET}
     secrets:
