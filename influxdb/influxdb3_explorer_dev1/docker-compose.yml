@@ -1,0 +1,58 @@
+name: influxdb3
+services:
+  influxdb3-core:
+    container_name: influxdb3-core
+    image: influxdb:3-core
+    ports:
+      - 8181:8181
+    command:
+      - influxdb3
+      - serve
+      - --node-id=node0
+      - --object-store=file
+      - --data-dir=/var/lib/influxdb3/data
+      - --plugin-dir=/var/lib/influxdb3/plugins
+    # Volumenes bind, cambiar a tipo named
+    # para que asi docker los administre
+    volumes:
+      - type: bind
+        source: ~/.influxdb3/core/data
+        target: /var/lib/influxdb3/data
+      - type: bind
+        source: ~/.influxdb3/core/plugins
+        target: /var/lib/influxdb3/plugins
+    networks:
+      - iot-network
+  
+  explorer:
+    image: influxdata/influxdb3-ui:1.4.0
+    container_name: influxdb3-explorer
+    command: ["--mode=admin"]
+    ports:
+      - "8888:80"
+    volumes:
+      - ./config:/app-root/config:ro
+    restart: unless-stopped
+    networks:
+      - iot-network
+
+  grafana:
+    image: grafana/grafana:main-ubuntu
+    container_name: grafana
+    env_file:
+      - grafana.env
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    restart: unless-stopped
+    networks:
+      - iot-network
+
+
+networks:
+  iot-network:
+    driver: bridge
+
+volumes:
+  grafana-data:
