@@ -1,0 +1,80 @@
+name: DEV_GF_INFLUX
+services:
+  grafana:
+    image: grafana/grafana:main-ubuntu
+    container_name: grafana01
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+        # This settigns will override th conf/grafana.ini
+      - GF_DEFAULT_INSTANCE_NAME=GF_Main
+      - GF_SECURITY_ADMIN_USER__FILE=/run/secrets/grafana_admin_user
+      - GF_SECURITY_ADMIN_PASSWORD__FILE=/run/secrets/grafana_admin_password
+      - API_TOKEN__FILE=/run/secrets/influxdb_admin_token
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./gf_provisioning:/etc/grafana/provisioning:ro
+    secrets:
+      - grafana_admin_user
+      - grafana_admin_password
+      - influxdb_admin_token
+    networks:
+      - iot-network
+
+  influxdb3-core:
+    container_name: influxdb3-core
+    image: influxdb:3.6.0-core
+    ports:
+      - 8181:8181
+    environment:
+      - INFLUXDB3_ADMIN_TOKEN_FILE=run/secrets/influxdb_admin_token
+      - INFLUXDB3_DATABASE_NAME=main
+    command:
+      - influxdb3
+      - serve
+      - --node-id=node0
+      - --object-store=file
+      - --data-dir=/var/lib/influxdb3/data
+      - --plugin-dir=/var/lib/influxdb3/plugins
+    # Volumenes bind, cambiar a tipo named
+    # para que asi docker los administre
+    volumes:
+      - type: bind
+        source: ~/.influxdb3/core/data
+        target: /var/lib/influxdb3/data
+      - type: bind
+        source: ~/.influxdb3/core/plugins
+        target: /var/lib/influxdb3/plugins
+    secrets:
+      - influxdb_admin_token
+    networks:
+      - iot-network
+
+  explorer:
+    image: influxdata/influxdb3-ui:1.4.0
+    container_name: influxdb3-explorer
+    command: ["--mode=admin"]
+    ports:
+      - "8888:80"
+    volumes:
+      - ./config:/app-root/config:ro
+    restart: unless-stopped
+    networks:
+      - iot-network
+
+networks:
+  iot-network:
+    driver: bridge
+
+volumes:
+  grafana-data:
+
+
+secrets:
+  grafana_admin_user:
+    file: ./secrets/.env.grafana_admin_user
+  grafana_admin_password:
+    file: ./secrets/.env.grafana_admin_password
+  influxdb_admin_token:
+    file: ./secrets/.env.influxdb_admin_token
