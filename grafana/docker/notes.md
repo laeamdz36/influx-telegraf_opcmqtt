@@ -1,17 +1,74 @@
-## Summary
+# Summary - Automating deploying of grafana
+
+## COnfiguring security with Docker secrets in ``Grafana``
 
 Configure the admins passwords with secrets:
 Admin password secret: ``/run/secrets/admin_password``
 Environment variable: ``GF_SECURITY_ADMIN_PASSWORD__FILE=/run/secrets/admin_password``
 
-1. Do not modiry grafana.ini, instead override configurations with enviroment variables
-override an option 
+> [!Note]
+> For each secret in Docker compose is need a separated file, in this case for admin and password
+> will be needed 2 files  
 
-Where ``<SECTION NAME>`` is the text within the square brackets (``[`` and ``]``) in the configuration file. All letters must be uppercase, periods (.) and dashes (-) must replaced by underscores (_). For example, if you have these configuration settings:
+```
+└── 📁Proyect_Folder
+    └── 📁config
+    └── 📁gf_provisioning
+        ├── datasources.yml
+    └── 📁secrets
+        ├── .env.grafana_admin_password # <- file for password
+        ├── .env.grafana_admin_user # <- file for name of admin user
+        ├── .env.influxdb_admin_token
+    ├── docker-compose.yml
+    └── grafana.env
+```
+
+In Docker compose the configuration will be:
+
+```yml
+services:
+  grafana:
+    image: grafana/grafana:main-ubuntu
+    container_name: grafana01
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+        # This settigns will override th conf/grafana.ini
+      - GF_DEFAULT_INSTANCE_NAME=GF_Main
+      - GF_SECURITY_ADMIN_USER__FILE=/run/secrets/grafana_admin_user
+      - GF_SECURITY_ADMIN_PASSWORD__FILE=/run/secrets/grafana_admin_password
+      - API_TOKEN__FILE=/run/secrets/influxdb_admin_token
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./gf_provisioning:/etc/grafana/provisioning:ro
+    secrets:
+      - grafana_admin_user
+      - grafana_admin_password
+      - influxdb_admin_token
+    networks:
+      - iot-network
+```
+
+> [!NOTE]
+> For grafana nee to be specified with **__FILE** at the final of the enviroment variable at the final
+> as mentioned in the grafana documentation  
+
+## Configuring Grafana
+
+!!! Note
+    Do not modify grafana.ini, instead override configurations with enviroment variables override an option 
+
+For Docker :whale2: compose:
+> [!NOTE]
+> Do not modify grafana.ini, instead override configurations with enviroment variables override an option 
 
 ```bash
 GF_<SECTION NAME>_<KEY>
 ```
+
+Where ``<SECTION NAME>`` is the text within the square brackets (``[`` and ``]``) in the configuration file. All letters must be uppercase, periods (.) and dashes (-) must replaced by underscores (_). For example, if you have these configuration settings:
+
 
 ```ini
 # default section
@@ -52,13 +109,14 @@ Each edition is available in two variants: Alpine and Ubuntu.
 
 The following configurations are set by default when you start the Grafana Docker container. When running in Docker you cannot change the configurations by editing the ``conf/grafana.ini`` file. Instead, you can modify the configuration using ``environment variables.``
 
-Setting	Default value
-GF_PATHS_CONFIG	/etc/grafana/grafana.ini
-GF_PATHS_DATA	/var/lib/grafana
-GF_PATHS_HOME	/usr/share/grafana
-GF_PATHS_LOGS	/var/log/grafana
-GF_PATHS_PLUGINS	/var/lib/grafana/plugins
-GF_PATHS_PROVISIONING	/etc/grafana/provisioning
+| Setting               |             Default value |
+| :-------------------- | ------------------------: |
+| GF_PATHS_CONFIG       |  /etc/grafana/grafana.ini |
+| GF_PATHS_DATA         |          /var/lib/grafana |
+| GF_PATHS_HOME         |        /usr/share/grafana |
+| GF_PATHS_LOGS         |          /var/log/grafana |
+| GF_PATHS_PLUGINS      |  /var/lib/grafana/plugins |
+| GF_PATHS_PROVISIONING | /etc/grafana/provisioning |
 
 ```yml
 
@@ -112,3 +170,11 @@ Environment variable: ``GF_SECURITY_ADMIN_PASSWORD__FILE=/run/secrets/admin_pass
 
 
 ## Provisioning the datasources
+
+```mermaid
+graph TD;
+    A-->B;
+    A-->C;
+    B-->D;
+    C-->D;
+```
