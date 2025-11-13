@@ -1,10 +1,15 @@
-# Summary - Automating deploying of grafana
+# Summary - Automating deploying of grafana, config and datasources
 
-## COnfiguring security with Docker secrets in ``Grafana``
+## Configuring security with Docker secrets in ``Grafana``
 
-Configure the admins passwords with secrets:
-Admin password secret: ``/run/secrets/admin_password``
-Environment variable: ``GF_SECURITY_ADMIN_PASSWORD__FILE=/run/secrets/admin_password``
+You can apply this technique to any configuration options in ``conf/grafana.ini`` by setting  
+``GF_<SectionName>_<KeyName>__FILE``
+
+The following example demonstrates how to set the admin password:
+
+Configure the admins passwords with secrets:  
+- Admin password secret: ``/run/secrets/admin_password``
+- Environment variable: ``GF_SECURITY_ADMIN_PASSWORD__FILE=/run/secrets/admin_password``  
 
 > [!Note]
 > For each secret in Docker compose is need a separated file, in this case for admin and password
@@ -21,9 +26,9 @@ Environment variable: ``GF_SECURITY_ADMIN_PASSWORD__FILE=/run/secrets/admin_pass
         ├── .env.influxdb_admin_token
     ├── docker-compose.yml
     └── grafana.env
-```
+```  
 
-In Docker compose the configuration will be:
+In Docker compose the configuration will be:  
 
 ```yml
 services:
@@ -55,9 +60,6 @@ services:
 > as mentioned in the grafana documentation  
 
 ## Configuring Grafana
-
-!!! Note
-    Do not modify grafana.ini, instead override configurations with enviroment variables override an option 
 
 For Docker :whale2: compose:
 > [!NOTE]
@@ -97,7 +99,11 @@ export GF_PLUGIN_GRAFANA_IMAGE_RENDERER_RENDERING_IGNORE_HTTPS_ERRORS=true
 export GF_FEATURE_TOGGLES_ENABLE=newNavigation
 ```
 
-### Configuring a image for grafana
+## Configuring a custom image for grafana
+
+The special objective for buidla  custom image from grafana open source, is to get a image with all
+the needed plugins built in the image since the start of the development, in special for the plugin
+``Image Renderer plugin`` that is not available in the image of gragana open soruce docker `gragana/grafana`
 
 There are 2 docker images for grafana
 - Grafan enterprise: ``grafana/grafana-enterprise``
@@ -105,22 +111,6 @@ There are 2 docker images for grafana
 
 Each edition is available in two variants: Alpine and Ubuntu.
 
-### Default paths
-
-The following configurations are set by default when you start the Grafana Docker container. When running in Docker you cannot change the configurations by editing the ``conf/grafana.ini`` file. Instead, you can modify the configuration using ``environment variables.``
-
-| Setting               |             Default value |
-| :-------------------- | ------------------------: |
-| GF_PATHS_CONFIG       |  /etc/grafana/grafana.ini |
-| GF_PATHS_DATA         |          /var/lib/grafana |
-| GF_PATHS_HOME         |        /usr/share/grafana |
-| GF_PATHS_LOGS         |          /var/log/grafana |
-| GF_PATHS_PLUGINS      |  /var/lib/grafana/plugins |
-| GF_PATHS_PROVISIONING | /etc/grafana/provisioning |
-
-```yml
-
-```
 
 ### Build Grafana with the Image Renderer plugin pre-installed
 
@@ -159,22 +149,37 @@ docker build \
 docker run -d -p 3000:3000 --name=grafana grafana-custom
 ```
 
-### Configure Grafana with docker secrets
-
-You can apply this technique to any configuration options in ``conf/grafana.ini`` by setting ``GF_<SectionName>_<KeyName>__FILE``
-
-The following example demonstrates how to set the admin password:
-
-Admin password secret: ``/run/secrets/admin_password``
-Environment variable: ``GF_SECURITY_ADMIN_PASSWORD__FILE=/run/secrets/admin_password``
-
-
 ## Provisioning the datasources
 
-```mermaid
-graph TD;
-    A-->B;
-    A-->C;
-    B-->D;
-    C-->D;
+### Default paths
+
+The following configurations are set by default when you start the Grafana Docker container. When running in Docker you cannot change the configurations by editing the ``conf/grafana.ini`` file. Instead, you can modify the configuration using ``environment variables.``
+
+| Setting               |             Default value |
+| :-------------------- | ------------------------: |
+| GF_PATHS_CONFIG       |  /etc/grafana/grafana.ini |
+| GF_PATHS_DATA         |          /var/lib/grafana |
+| GF_PATHS_HOME         |        /usr/share/grafana |
+| GF_PATHS_LOGS         |          /var/log/grafana |
+| GF_PATHS_PLUGINS      |  /var/lib/grafana/plugins |
+| GF_PATHS_PROVISIONING | /etc/grafana/provisioning |
+
+### Datasource: InfluxDB3 Core
+
+For influxdb3 Core the configuration yaml file according documentation is:  
+```yml
+apiVersion: 1
+
+datasources:
+  - name: InfluxDB_v3_InfluxQL
+    type: influxdb
+    access: proxy
+    url: http://influxdb3-core:8181
+    jsonData:
+      version: SQL
+      dbName: site
+      httpMode: POST
+      insecureGrpc: false
+    secureJsonData:
+      token: the_token_for_influxDB
 ```

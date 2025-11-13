@@ -3,6 +3,72 @@
 Objetivo: Recoleccion e ingesta de datos hacia la base de datos influx db desde fuentes como Servidor OPC y Brokers MQTT
 Servir los datos a traves de la API de Influx DB hacia Servicios Grafana
 
+### Notas 2025/11/13
+
+##### Planeacion de fases
+
+```mermaid
+---
+config:
+  theme: 'base'
+  themeVariables:
+    primaryColor: '#0f6173ff'
+    primaryTextColor: '#fff'
+    primaryBorderColor: '#0568fcff'
+    lineColor: '#F8B229'
+    secondaryColor: '#006100'
+    tertiaryColor: '#fff'  
+---
+gantt
+    title Monitoring
+    dateFormat YYYY-MM-DD
+    dateFormat YYYY-MM-DD
+    section Grafana
+        Provisioning Test   :milestone,active, :a1, 2025-11-10, 5d
+        Custom Image    : 4d
+    section InfluxDB3 Core
+        Docker Image :2025-11-10, 12d
+        Token generation :done, 2025-11-10 3d
+        Telegraf MQTT    :done, 5d
+        Telegraf OPC    : 1d
+    section Prometheus
+        Docker image :1d
+    section cAdvidor
+        Docker image :1d
+        Test on linux :1d
+    section Pycomm
+        Docker App :5d
+    section Eclipse Ditto
+        Docker image :3d
+
+```
+
+Description de el stack de tecnologias , comunicaciones y protocolos
+
+```mermaid
+---
+config:
+  theme: 'base'
+  themeVariables:
+    primaryColor: '#0f6173ff'
+    primaryTextColor: '#fff'
+    primaryBorderColor: '#0568fcff'
+    lineColor: '#F8B229'
+    secondaryColor: '#006100'
+    tertiaryColor: '#fff'  
+---
+sequenceDiagram
+    Mosquitto Broker ->> InfluxDB 3 Core: MQTT
+    Telegraf ->> Mosquitto Broker: MQTT
+    Note over Telegraf, Mosquitto Broker: 
+    Grafana ->> InfluxDB 3 Core: SQL Query
+    Prometheus -->> Grafana: Metrics Node Exporter
+```
+
+#### Proyect Structure
+```
+```
+
 ### Notes 2025/11/09:
 Los dispositivos Pi Pico W con micropython estan enviando la data del tipo string
 es necesario ya sea desde el mismo dispositivo enviarlo como line protocol para influxDB o manejarlo desde alguna aplicacion como Python o Java.
