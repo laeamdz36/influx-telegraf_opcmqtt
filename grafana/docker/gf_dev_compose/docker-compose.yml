@@ -14,11 +14,13 @@ services:
       - API_TOKEN__FILE=/run/secrets/influxdb_admin_token
     volumes:
       - grafana-data:/var/lib/grafana
-      - ./gf_provisioning:/etc/grafana/provisioning:ro
+      - ./provisioning/:/etc/grafana/provisioning/
     secrets:
       - grafana_admin_user
       - grafana_admin_password
       - influxdb_admin_token
+    depends_on:
+      - influxdb3-core
     networks:
       - iot-network
 

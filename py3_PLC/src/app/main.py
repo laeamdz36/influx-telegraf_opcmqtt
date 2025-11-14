@@ -9,7 +9,7 @@ def config_server():
 
     # Need to write all complete address
     host = "http://localhost:8181"
-    token = "apiv3_LM_SODQOqGjWUrayvX81i3fw9TrZBWGXGkT6MdDuKQifiSLx5HELA7B6DuKH0BZYEWTKAiDb_y0CmQ2tRZzQ3w"
+    token = "apiv3_copperAplhaBravoRomeLima366!"
     database = "new_database"
 
     return {"host": host, "token": token, "db": database}

@@ -3,6 +3,19 @@
 Objetivo: Recoleccion e ingesta de datos hacia la base de datos influx db desde fuentes como Servidor OPC y Brokers MQTT
 Servir los datos a traves de la API de Influx DB hacia Servicios Grafana
 
+### Notas 2025/11/14
+
+1. Grafana datasource provisioning Done,
+2. TODO: Explorar control de version de dashboards en grafana, con provider
+3. Conexion InfluxDB 3 Core, MQTT y OPC UA
+
+##### Telegraf plugins to deploy
+inputs.mqtt_consumer
+inputs.modbus
+inputs.opcua
+inputs.opcua_listener
+inputs.docker
+
 ### Notas 2025/11/13
 
 ##### Planeacion de fases
@@ -40,6 +53,10 @@ gantt
         Docker App :5d
     section Eclipse Ditto
         Docker image :3d
+    section Apache Airflow
+        Docker image :3d
+    section Neo4j
+        Docekr Image :3d
 
 ```
 
@@ -99,17 +116,27 @@ The container will initialize a bucket with the configured name
 
 Plataforma montada sobre docker
 
-- InfluxDB OSS 2
+- InfluxDB 3 Core
 - Telegraf Plugin MQTT input
 - Telegraf Plugin OPC UA, conexion a OPC Server (Ignition OPC UA), ON DEV
 - Grafana
+  - Datasource provisioning
+  - Dashboard provisioning
+  - Version control Dashboard, and Datasource GIT
 
-# Desarrollos en el PLC
+# Desarrollos e Integraciones Tecnologicas
 
 1. Maquina secuencial, se enviara un entero como descriptor del State, para asii graficar Stat Graph en grafana
 2. Mauqina secuencial, se enviara un String como descriptor del State, visualizacion Stat Grafana
 3. Monitorizacion de Variables de Negocio, como Runtime, utilizando Transaction groups de Ignition
 4. Desarrollos de medicion de OEE, conceptos de breakdown, downtime
+5. Digital Twin con ``Eclipse Ditto`` Java.
+6. Simulacion de procesos, conexion a Factory digital Objects, con el Digital Twin
+   1. JaamSim
+   2. FlexSim
+   3. AnyLogic PLE
+   4. SimPy y SOFA (Python)
+   5. UrbanSim
 
 ## Influx DB - Line Protocol (Se utilizara Influx DB 3 Core)
 
