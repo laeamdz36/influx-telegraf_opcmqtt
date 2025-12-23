@@ -31,7 +31,7 @@ services:
       - 8181:8181
     environment:
       - INFLUXDB3_ADMIN_TOKEN_FILE=run/secrets/influxdb_admin_token
-      - INFLUXDB3_DATABASE_NAME=main
+      - INFLUXDB3_DATABASE_NAME=${INFLUX_DB_NAME}
     command:
       - influxdb3
       - serve
@@ -53,8 +53,38 @@ services:
     networks:
       - iot-network
 
+  telegraf:
+    image: telegraf:1.36.3
+    container_name: telegraf
+    # sh -c "export INFLUX_TOKEN=$$(cat /run/secrets/influxdb_admin_token.env) && exec telegraf"
+    command: >
+      sh -c "export INFLUX_TOKEN=apiv3_copperAplhaBravoRomeLima366! && exec telegraf"
+    environment:
+      MQTT_BROKER: ${MQTT_BROKER_URL}
+      # Configuration output pluguin v2 to write on influxdb3
+      INFLUX_SERVICE: influxdb3-core
+      INFLUX_PORT: 8181
+      DATABASE_NAME: ${INFLUX_DB_NAME}
+      INFLUXDB_BUCKET: ${INFLUX_DB_NAME}
+      # For reading secrets from docker secrets telegraf use plugin
+      # secretstores.docker
+    secrets:
+      - influxdb_admin_token
+      - mqtt_broker
+      - mqtt_user
+    volumes:
+    # Mount configuration file
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+    depends_on:
+      - influxdb3-core
+      # influxdb2:
+      #   condition: service_healthy
+    restart: always
+    networks:
+      - iot-network
+
   explorer:
-    image: influxdata/influxdb3-ui:1.4.0
+    image: influxdata/influxdb3-ui:1.6.0
     container_name: influxdb3-explorer
     command: ["--mode=admin"]
     ports:
@@ -75,8 +105,14 @@ volumes:
 
 secrets:
   grafana_admin_user:
-    file: ./secrets/.env.grafana_admin_user
+    file: ./secrets/grafana_admin_user.env
   grafana_admin_password:
-    file: ./secrets/.env.grafana_admin_password
+    file: ./secrets/grafana_admin_password.env
   influxdb_admin_token:
-    file: ./secrets/.env.influxdb_admin_token
+    file: ./secrets/influxdb_admin_token.env
+  mqtt_broker:
+    file: ./secrets/mqtt_broker.env
+  mqtt_user:
+    file: ./secrets/mqtt_user.env
+  mqtt_pass:
+    file: ./secrets/mqtt_pass.env
