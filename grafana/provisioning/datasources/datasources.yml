@@ -10,7 +10,7 @@ datasources:
     url: http://influxdb3-core:8181
     jsonData:
       version: SQL
-      dbName: new_database
+      dbName: main
       httpMode: POST
       insecureGrpc: true
     secureJsonData:
