@@ -1,78 +1,82 @@
+name: Influx3_Grafana_Telegraf
 services:
-  # InfluxDB OSS 2
-  influxdb2:
-    image: influxdb:2.7.12
-    container_name: Influx2
-    restart: always
+  grafana:
+    image: grafana/grafana:main-ubuntu
+    container_name: grafana_service
+    restart: unless-stopped
     ports:
-      - 8086:8086
+      - '3000:3000'
     environment:
-      DOCKER_INFLUXDB_INIT_MODE: ${INFLUXDB_INIT_MODE}
-      # The container's path to the file that contains th user name for the initial user
-      DOCKER_INFLUXDB_INIT_USERNAME_FILE: /run/secrets/influxdb2-admin-username
-      # The container's path to the faile that contains the password for the initial user
-      DOCKER_INFLUXDB_INIT_PASSWORD_FILE: /run/secrets/influxdb2-admin-password
-      # The container's path to the file that contains a token to use for initial Operator Toke
-      # If not defined, InfluxDB generates one automatically.
-      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN_FILE: /run/secrets/influxdb2-admin-token
-      # Settings for the initial org and bucket
-      DOCKER_INFLUXDB_INIT_ORG: ${INFLUXDB_INIT_ORG}
-      DOCKER_INFLUXDB_INIT_BUCKET: ${INFLUXDB_INIT_BUCKET}
-  # Secret files
-    secrets:
-      - influxdb2-admin-username
-      - influxdb2-admin-password
-      - influxdb2-admin-token
+        # This settigns will override the conf/grafana.ini
+      - GF_DEFAULT_INSTANCE_NAME=GF_Main
+      - GF_SECURITY_ADMIN_USER__FILE=/run/secrets/grafana_admin_user
+      - GF_SECURITY_ADMIN_PASSWORD__FILE=/run/secrets/grafana_admin_password
+      - API_TOKEN__FILE=/run/secrets/influxdb_admin_token
     volumes:
-      - type: volume
-        source: influxdb2-data
-        target: /var/lib/influxdb2
-      - type: volume
-        source: influxdb2-config
-        target: /etc/influxdb2
-    networks:
-      - iot-network
-    # healthcheck:
-    #   test: ["CMD", "influxdb2", "ping"]
-    #   interval: 10s
-    #   timeout: 5s
-    #   retries: 5
-
-  telegraf:
-    image: telegraf:1.36.2
-    container_name: telegraf
-    command: >
-      sh -c "export INFLUX_TOKEN=$$(cat /run/secrets/influxdb2-admin-token) && exec telegraf"
-    environment:
-      MQTT_BROKER: ${MQTT_BROKER_URL}
-      INFLUXDB_ORG: ${INFLUXDB_INIT_ORG}
-      INFLUXDB_BUCKET: ${INFLUXDB_INIT_BUCKET}
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
     secrets:
-      - influxdb2-admin-token
-    volumes:
-    # Mount configurastion file
-      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - grafana_admin_user
+      - grafana_admin_password
+      - influxdb_admin_token
     depends_on:
-      - influxdb2
-      # influxdb2:
-      #   condition: service_healthy
-    restart: always
+      - influxdb3-core
     networks:
       - iot-network
 
+  influxdb3-core:
+    container_name: influxdb3-core
+    image: influxdb:3.6.0-core
+    ports:
+      - 8181:8181
+    environment:
+      - INFLUXDB3_ADMIN_TOKEN_FILE=run/secrets/influxdb_admin_token
+      - INFLUXDB3_DATABASE_NAME=main
+    command:
+      - influxdb3
+      - serve
+      - --node-id=node0
+      - --object-store=file
+      - --data-dir=/var/lib/influxdb3/data
+      - --plugin-dir=/var/lib/influxdb3/plugins
+    # Volumenes bind, cambiar a tipo named
+    # para que asi docker los administre
+    volumes:
+      - type: bind
+        source: ~/.influxdb3/core/data
+        target: /var/lib/influxdb3/data
+      - type: bind
+        source: ~/.influxdb3/core/plugins
+        target: /var/lib/influxdb3/plugins
+    secrets:
+      - influxdb_admin_token
+    networks:
+      - iot-network
 
-secrets:
-  influxdb2-admin-username:
-    file: ./secrets/.env.influxdb2-admin-username
-  influxdb2-admin-password:
-    file: ./secrets/.env.influxdb2-admin-password
-  influxdb2-admin-token:
-    file: ./secrets/.env.influxdb2-admin-token
-
-volumes:
-  influxdb2-data:
-  influxdb2-config:
+  explorer:
+    image: influxdata/influxdb3-ui:1.4.0
+    container_name: influxdb3-explorer
+    command: ["--mode=admin"]
+    ports:
+      - "8888:80"
+    volumes:
+      - ./influxdb/config:/app-root/config:ro
+    restart: unless-stopped
+    networks:
+      - iot-network
 
 networks:
   iot-network:
     driver: bridge
+
+volumes:
+  grafana-data:
+
+
+secrets:
+  grafana_admin_user:
+    file: ./secrets/grafana_admin_user.env
+  grafana_admin_password:
+    file: ./secrets/grafana_admin_password.env
+  influxdb_admin_token:
+    file: ./secrets/influxdb_admin_token.env
