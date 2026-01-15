@@ -1,143 +1,3 @@
-# Collector telegraf MQTT, OPC UA, InfluxDB
-
-Objetivo: Recoleccion e ingesta de datos hacia la base de datos influx db desde fuentes como Servidor OPC y Brokers MQTT
-Servir los datos a traves de la API de Influx DB hacia Servicios Grafana
-
-### Notas 2025/11/14
-
-1. Grafana datasource provisioning Done,
-2. TODO: Explorar control de version de dashboards en grafana, con provider
-3. Conexion InfluxDB 3 Core, MQTT y OPC UA
-
-##### Telegraf plugins to deploy
-inputs.mqtt_consumer
-inputs.modbus
-inputs.opcua
-inputs.opcua_listener
-inputs.docker
-
-### Notas 2025/11/13
-
-##### Planeacion de fases
-
-```mermaid
----
-config:
-  theme: 'base'
-  themeVariables:
-    primaryColor: '#0f6173ff'
-    primaryTextColor: '#fff'
-    primaryBorderColor: '#0568fcff'
-    lineColor: '#F8B229'
-    secondaryColor: '#006100'
-    tertiaryColor: '#fff'  
----
-gantt
-    title Monitoring
-    dateFormat YYYY-MM-DD
-    dateFormat YYYY-MM-DD
-    section Grafana
-        Provisioning Test   :milestone,active, :a1, 2025-11-10, 5d
-        Custom Image    : 4d
-    section InfluxDB3 Core
-        Docker Image :2025-11-10, 12d
-        Token generation :done, 2025-11-10 3d
-        Telegraf MQTT    :done, 5d
-        Telegraf OPC    : 1d
-    section Prometheus
-        Docker image :1d
-    section cAdvidor
-        Docker image :1d
-        Test on linux :1d
-    section Pycomm
-        Docker App :5d
-    section Eclipse Ditto
-        Docker image :3d
-    section Apache Airflow
-        Docker image :3d
-    section Neo4j
-        Docekr Image :3d
-
-```
-
-Description de el stack de tecnologias , comunicaciones y protocolos
-
-```mermaid
----
-config:
-  theme: 'base'
-  themeVariables:
-    primaryColor: '#0f6173ff'
-    primaryTextColor: '#fff'
-    primaryBorderColor: '#0568fcff'
-    lineColor: '#F8B229'
-    secondaryColor: '#006100'
-    tertiaryColor: '#fff'  
----
-sequenceDiagram
-    Mosquitto Broker ->> InfluxDB 3 Core: MQTT
-    Telegraf ->> Mosquitto Broker: MQTT
-    Note over Telegraf, Mosquitto Broker: 
-    Grafana ->> InfluxDB 3 Core: SQL Query
-    Prometheus -->> Grafana: Metrics Node Exporter
-```
-
-#### Proyect Structure
-```
-```
-
-### Notes 2025/11/09:
-Los dispositivos Pi Pico W con micropython estan enviando la data del tipo string
-es necesario ya sea desde el mismo dispositivo enviarlo como line protocol para influxDB o manejarlo desde alguna aplicacion como Python o Java.
-
-Desarrollo 1, forwarder en Python para suscribirse a el Broker MQTT principal que es Mosquitto en Home assistant y desde pyhton llevar a cabo la transformacion en line protolo de los topicos registrados en dicha aplicacion, para asi insertarlo de forma directa a InfluxDB
-
-Desventajas en python:
-1. La concurrencia, tiene un event loop del tipo poll, puede existir overhead en la ingesta de datos desde el broker
-
-Desarrollo 2, es la ingesta desde el input plugin de telegraf para MQTT, esto ha sido probado con resultados satisfactorios
-
-Para la conexion OPC UA, se utilizaria el servidor de Ignition Maker, pero es posible explirar
-
--->> Como desarrollo practico, para la Observavilidad en plataformas y tecnologias Open Source, se llevara a cabo la implementacion del monitor para infraestructura de control
-
-PLC Allen Bradley
-Los PLC allen bradley cuentan con comunicacion Ethernet IP basado en el porotcolo CIP, al igual de OPC, para la lectura de informacion de monitore, utilizaremos la libreria pycomm3 para leer tags del PLC, transformaremos la data en el lineprotocol necesario par INfluxDB 3 Core
-Tecnologias:
-InfluxDB 3 Core
-Python 3
-    pycomm3
-Grafana
-
-Node exorter para infraestructura:
-Input plugin Telegra, enviar a influxDb3 y monitorear con grafana
-
-The container will initialize a bucket with the configured name
-
-Plataforma montada sobre docker
-
-- InfluxDB 3 Core
-- Telegraf Plugin MQTT input
-- Telegraf Plugin OPC UA, conexion a OPC Server (Ignition OPC UA), ON DEV
-- Grafana
-  - Datasource provisioning
-  - Dashboard provisioning
-  - Version control Dashboard, and Datasource GIT
-
-# Desarrollos e Integraciones Tecnologicas
-
-1. Maquina secuencial, se enviara un entero como descriptor del State, para asii graficar Stat Graph en grafana
-2. Mauqina secuencial, se enviara un String como descriptor del State, visualizacion Stat Grafana
-3. Monitorizacion de Variables de Negocio, como Runtime, utilizando Transaction groups de Ignition
-4. Desarrollos de medicion de OEE, conceptos de breakdown, downtime
-5. Digital Twin con ``Eclipse Ditto`` Java.
-6. Simulacion de procesos, conexion a Factory digital Objects, con el Digital Twin
-   1. JaamSim
-   2. FlexSim
-   3. AnyLogic PLE
-   4. SimPy y SOFA (Python)
-   5. UrbanSim
-
 ## Influx DB - Line Protocol (Se utilizara Influx DB 3 Core)
 
 General structure:
@@ -188,4 +48,25 @@ docker exec -it <Name_of_the_service_InfluxDB3> influxdb3 create token --admin
 example:
 ```bash
 docker exec -it <influxdb3_core> influxdb3 create token --admin
+```
+
+### Description for lñine protocol to write data in InfluxDB3
+
+- Table: A string that identifies the table to store data in
+- tag set: Comma-delimited list of key value pairs, each representing a tag
+- field set: Key-value pairs between the first and second unscaped whitespaces
+- timestamp: Integer value after the second unescaped whitespace
+
+> myTable,tag1=val1,tag2=val2 field1="v1",field2=1i 0000000000000000000
+
+example:
+```
+Table: home
+- tags
+  - room: Living Room or Kitchen
+- fields
+    temp: temperature in °C (float)
+    hum: percent humidity (float)
+    co: carbon monoxide in parts per million (integer)
+timestamp: Unix timestamp in second precision
 ```
