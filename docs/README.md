@@ -1,191 +1,209 @@
-# Collector telegraf MQTT, OPC UA, InfluxDB
+# Main Description
 
-Objetivo: Recoleccion e ingesta de datos hacia la base de datos influx db desde fuentes como Servidor OPC y Brokers MQTT
-Servir los datos a traves de la API de Influx DB hacia Servicios Grafana
+The Compose is integrated by 3 services:
+1. Influxdb3 Core
+2. Telegraf
+3. Influxdb Explorer
 
-### Notas 2025/11/14
+``Influexdb3 Core:`` Is the main time series database 
+``Telegraf:`` Is a plugin for influxdb 3 core to ingest data from different data sources, for this deployment
+MQTT input plugin will be deployed to perform a connection to a MQTT Broker built in Home Assistant.
+``Influxdb Explorer:`` is a web graphical user interfaz to monitor and manage the influxdb3 core database.
 
-1. Grafana datasource provisioning Done,
-2. TODO: Explorar control de version de dashboards en grafana, con provider
-3. Conexion InfluxDB 3 Core, MQTT y OPC UA
+## Main issues to solve
 
-##### Telegraf plugins to deploy
-inputs.mqtt_consumer
-inputs.modbus
-inputs.opcua
-inputs.opcua_listener
-inputs.docker
+1. The data format from the source in this case Home assistan MQTT Broker Mosquitto.
+2. Flexible way to provisioning the token key to influxdb3 core, in order to write data from telegraf.
+3. Flexible way to define and estabish the token to telegraf to link to the corresponding influxdb database.
+4. Volume type for each service in order to perform backups and restore.
 
-### Notas 2025/11/13
+## Config files
 
-##### Planeacion de fases
+There is initial config files
 
-```mermaid
----
-config:
-  theme: 'base'
-  themeVariables:
-    primaryColor: '#0f6173ff'
-    primaryTextColor: '#fff'
-    primaryBorderColor: '#0568fcff'
-    lineColor: '#F8B229'
-    secondaryColor: '#006100'
-    tertiaryColor: '#fff'  
----
-gantt
-    title Monitoring
-    dateFormat YYYY-MM-DD
-    dateFormat YYYY-MM-DD
-    section Grafana
-        Provisioning Test   :milestone,active, :a1, 2025-11-10, 5d
-        Custom Image    : 4d
-    section InfluxDB3 Core
-        Docker Image :2025-11-10, 12d
-        Token generation :done, 2025-11-10 3d
-        Telegraf MQTT    :done, 5d
-        Telegraf OPC    : 1d
-    section Prometheus
-        Docker image :1d
-    section cAdvidor
-        Docker image :1d
-        Test on linux :1d
-    section Pycomm
-        Docker App :5d
-    section Eclipse Ditto
-        Docker image :3d
-    section Apache Airflow
-        Docker image :3d
-    section Neo4j
-        Docekr Image :3d
+``.env`` file is used to load during the running docker compose enviroment variables
+used to set particular configs in each service
 
+``secrets/`` directory to put all secrets files with extension ``.env`` to be loaded
+by docker compose.
+
+``influxdb\config`` directory to config settings for telegraf to achive data writing to influxdb3 core database.
+
+#### Influxdb3 Core Service
+
+Config variables needed:
+INFLUX_DB_NAME: The database name
+
+##### The token for Influxdb3 Core
+
+To define a initial admin token for influxdb3 core, is possibel and maintaining
+security with the docker secrets, thus, creating a file with the initial admin token 
+like this:
+
+``expiry_millis:`` Unix time in miliseconds.
+
+```json
+{
+  "token": "put_here_the_initial_admin_token!",
+  "name": "init-admin-token",
+  "expiry_millis": 1857580146000
+}
+```
+Write this lines of code into a file with a name to be used in docker compose secrets for influxdb3 core service.
+
+#### Telegraf config to write Influxdb3 Core
+
+Within the directory ``telegraf\`` the ``telegraf.conf`` is configured to be loaded into telegraf service, the directory is mount in a volume as described next:
+
+```yml
+volumes:
+    # Mount configuration file
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
 ```
 
-Description de el stack de tecnologias , comunicaciones y protocolos
+The basic configuration needed to write into the database is:
+Where INFLUX_TOKEN is loaded from docker secrets
 
-```mermaid
----
-config:
-  theme: 'base'
-  themeVariables:
-    primaryColor: '#0f6173ff'
-    primaryTextColor: '#fff'
-    primaryBorderColor: '#0568fcff'
-    lineColor: '#F8B229'
-    secondaryColor: '#006100'
-    tertiaryColor: '#fff'  
----
-sequenceDiagram
-    Mosquitto Broker ->> InfluxDB 3 Core: MQTT
-    Telegraf ->> Mosquitto Broker: MQTT
-    Note over Telegraf, Mosquitto Broker: 
-    Grafana ->> InfluxDB 3 Core: SQL Query
-    Prometheus -->> Grafana: Metrics Node Exporter
+``telegraf.conf``
+
+```toml
+[agent]
+  interval = "3s"
+  round_interval = true
+
+[[outputs.influxdb_v2]]
+  urls = ["http://influxdb3-core:8181"]
+  token = "${INFLUXDB_TOKEN}"
+  organization = "ignored"
+  bucket = "main"
 ```
 
-#### Proyect Structure
-```
-```
+To ingest data from MQTT broker use the input plugin
 
-### Notes 2025/11/09:
-Los dispositivos Pi Pico W con micropython estan enviando la data del tipo string
-es necesario ya sea desde el mismo dispositivo enviarlo como line protocol para influxDB o manejarlo desde alguna aplicacion como Python o Java.
+``[[inputs.mqtt_consumer]]``
 
-Desarrollo 1, forwarder en Python para suscribirse a el Broker MQTT principal que es Mosquitto en Home assistant y desde pyhton llevar a cabo la transformacion en line protolo de los topicos registrados en dicha aplicacion, para asi insertarlo de forma directa a InfluxDB
+#### Influxdb Explorer
 
-Desventajas en python:
-1. La concurrencia, tiene un event loop del tipo poll, puede existir overhead en la ingesta de datos desde el broker
+For configuration the explorer service, is need to mount a ``config.json`` file in
+the directory ``influxdb\config``
 
-Desarrollo 2, es la ingesta desde el input plugin de telegraf para MQTT, esto ha sido probado con resultados satisfactorios
+``config.json``
 
-Para la conexion OPC UA, se utilizaria el servidor de Ignition Maker, pero es posible explirar
-
--->> Como desarrollo practico, para la Observavilidad en plataformas y tecnologias Open Source, se llevara a cabo la implementacion del monitor para infraestructura de control
-
-PLC Allen Bradley
-Los PLC allen bradley cuentan con comunicacion Ethernet IP basado en el porotcolo CIP, al igual de OPC, para la lectura de informacion de monitore, utilizaremos la libreria pycomm3 para leer tags del PLC, transformaremos la data en el lineprotocol necesario par INfluxDB 3 Core
-Tecnologias:
-InfluxDB 3 Core
-Python 3
-    pycomm3
-Grafana
-
-Node exorter para infraestructura:
-Input plugin Telegra, enviar a influxDb3 y monitorear con grafana
-
-The container will initialize a bucket with the configured name
-
-Plataforma montada sobre docker
-
-- InfluxDB 3 Core
-- Telegraf Plugin MQTT input
-- Telegraf Plugin OPC UA, conexion a OPC Server (Ignition OPC UA), ON DEV
-- Grafana
-  - Datasource provisioning
-  - Dashboard provisioning
-  - Version control Dashboard, and Datasource GIT
-
-# Desarrollos e Integraciones Tecnologicas
-
-1. Maquina secuencial, se enviara un entero como descriptor del State, para asii graficar Stat Graph en grafana
-2. Mauqina secuencial, se enviara un String como descriptor del State, visualizacion Stat Grafana
-3. Monitorizacion de Variables de Negocio, como Runtime, utilizando Transaction groups de Ignition
-4. Desarrollos de medicion de OEE, conceptos de breakdown, downtime
-5. Digital Twin con ``Eclipse Ditto`` Java.
-6. Simulacion de procesos, conexion a Factory digital Objects, con el Digital Twin
-   1. JaamSim
-   2. FlexSim
-   3. AnyLogic PLE
-   4. SimPy y SOFA (Python)
-   5. UrbanSim
-
-## Influx DB - Line Protocol (Se utilizara Influx DB 3 Core)
-
-General structure:
-> measurement, tag_set field_set timestamp
-
-    - Measurement: The name of the metric or table
-    - tag_set: A set of tags key-value to index the values
-    - filed_set: The set of values or data that is being measured
-    - timestamp: The date and time of the data in Unix format in nanoseconds
-
-| Concepto  | InfluxDB 2.x | InfluxDB 3.x    |
-| --------- | ------------ | --------------- |
-| Bucket    | bucket       | database        |
-| DB-Engine | TSM          | Arrow / Parquet |
-| Query     | Flux / SQL   | ANSI SQL        |
-
-influxdb 3 core utiliza SQL, de esta forma onoo tendriamos que aprender un nuevo lenguaje
-para el caso si ya conocemos SQL
-
-## Docker compose file
-
-Docker compose file will export the needed variables for the telegraf.config file from the
-``.env`` file
-
-> Variables
-    - INFLUXDB_INIT_MODE=setup # Mode needed to init influxdb instance with initial settings
-    - INFLUXDB_INIT_ORG=MyOrg # Organization for set influxdb
-    - INFLUXDB_INIT_BUCKET=MyInitialBucket # initial bucket name
-    - MQTT_BROKER_URL=tcp://192.168.0.1:1883 # the ip for the MQTT Broker
-
-
-## Notas de desarrollo
-
-2025/11/10
-Se realizaron pruebas con los contenedores de influxdb3 core u su contenedor explroer
-que es el UI web para administrar la instancia de influxdb3 core
-
-Referencias a el explorer
-
-[InfluxDb3 Core Explorer](https://docs.influxdata.com/influxdb3/explorer/)
-
-1. Se llevo a cabo la generacion manual del token de InfluxDB3 core con la linea:
-
-```bash
-docker exec -it <Name_of_the_service_InfluxDB3> influxdb3 create token --admin
+```json
+{
+    "DEFAULT_INFLUX_SERVER": "http://influxdb3-core:8181",
+    "DEFAULT_INFLUX_DATABASE": "main",
+    "DEFAULT_API_TOKEN": "the_token_configured_also_for_influxdb3_service",
+    "DEFAULT_SERVER_NAME": "Local InfluxDB 3"
+}
 ```
 
-example:
-```bash
-docker exec -it <influxdb3_core> influxdb3 create token --admin
+#### Docker secrets with telegraf plugin
+
+References:
+[Telegraf Docker Secrets](https://www.influxdata.com/blog/storing-secrets-telegraf/)
+
+To use docker secrets directly in the ``telegraf.conf`` file is needed to configure the plugin ``[[secretstores.docker]]``
+
+Configure the plugin with the basic config:
+
+```toml
+[[secretstores.docker]]
+  id = "docker_store"
 ```
+
+Next use the secrets configured in th docker compose:
+
+```yml
+  telegraf:
+    image: telegraf:1.36.3
+    container_name: telegraf
+    environment:
+      MQTT_BROKER: ${MQTT_BROKER_URL}
+      # Configuration output pluguin v2 to write on influxdb3
+      INFLUX_SERVICE: influxdb3-core
+      INFLUX_PORT: 8181
+      DATABASE_NAME: ${INFLUX_DB_NAME}
+    user: "1000"
+    secrets:
+      - influxdbtoken_telegraf
+      - mqtt_user
+      - mqtt_pass
+
+secrets:
+  influxdb_admin_token:
+    file: ./secrets/influxdb_admin_token.env
+  mqtt_user:
+    environment: mqtt_user
+  mqtt_pass:
+    environment: mqtt_pass
+  influxdbtoken_telegraf:
+    environment: influxdbtoken_telegraf
+```
+In the ``telegraf.conf``:
+
+```toml
+[[outputs.influxdb_v2]]
+  urls = ["http://influxdb3-core:8181"]
+  token = "@{docker_store:influxdbtoken_telegraf}"
+```
+
+## Ingest data
+
+For read and ingest data into influxdb database, is need to configure the ``[[inputs.mqtt_consumer]]`` on telegraf config file ``telegraf.conf``
+
+```toml
+[[outputs.influxdb_v2]]
+  urls = ["http://influxdb3-core:8181"]
+  token = "@{docker_store:influxdbtoken_telegraf}"
+  organization = "ignored"
+  bucket = "main"
+
+# Configuration of the host
+# [[inputs.cpu]]
+#   percpu = true
+#   totalcpu = true
+#   report_active = true
+
+# [[inputs.mem]]
+# [[inputs.disk]]
+# [[inputs.system]]
+
+# ************************************
+# MQTT CONSUMER
+# ************************************
+[[inputs.mqtt_consumer]]
+  ## MQTT broker URLs to be used. The format should be scheme://host:port,
+  ## schema can be tcp, ssl, or ws.
+  servers = ["${MQTT_BROKER}"]
+
+  ## Topics that will be subscribed to.
+  # topics = [
+  #   "pico02/temperature",
+  #   "pico02/humidity",
+  #   "pico02/pressure",
+  #   "pico02/cpu_temp"
+  # ]
+
+  # Topic DEV with lineprotocol
+  topics = ["pico01/#", "pico02/#"]
+
+  ## QoS policy for messages
+    # 0 = at most once
+  ##   1 = at least once
+  ##   2 = exactly once
+  ##
+  ## When using a QoS of 1 or 2, you should enable persistent_session to allow
+  ## resuming unacknowledged messages.
+  qos = 0
+
+  ## If unset, a random client ID will be generated.
+  # client_id = "telegraf-infra"
+
+  ## Username and password to connect MQTT server.
+  username = "@{docker_store:mqtt_user}"
+  password = "@{docker_store:mqtt_pass}"
+  data_format = "value"
+  data_type = "float"
+```
+
