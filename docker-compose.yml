@@ -68,23 +68,10 @@ services:
       INFLUX_PORT: 8181
       DATABASE_NAME: ${INFLUX_DB_NAME}
     secrets:
-      - source: influxdbtoken_telegraf
-        target: influxdbtoken_telegraf
-        uid: "1000"
-        gid: "1000"
-        mode: 0440
-      - source: mqtt_user
-        target: mqtt_user
-        uid: "1000"
-        gid: "1000"
-        mode: 0440
-      - mqtt_broker
-      - source: mqtt_pass
-        target: mqtt_pass
-        uid: "1000"
-        gid: "1000"
-        mode: 0440
-    user: ${USERID}
+      - influxdbtoken_telegraf
+      - mqtt_user
+      - mqtt_pass
+    user: "1000"
     volumes:
       - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
     depends_on:
@@ -106,8 +93,6 @@ secrets:
     file: ./secrets/influxdb_admin_token.env
   influxdbtoken_telegraf:
     file: ./secrets/influxdbtoken_telegraf.env
-  mqtt_broker:
-    file: ./secrets/mqtt_broker.env
   mqtt_user:
     file: ./secrets/mqtt_user.txt
   mqtt_pass:
