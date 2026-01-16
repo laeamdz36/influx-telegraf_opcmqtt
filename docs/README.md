@@ -124,23 +124,21 @@ Next use the secrets configured in th docker compose:
       INFLUX_SERVICE: influxdb3-core
       INFLUX_PORT: 8181
       DATABASE_NAME: ${INFLUX_DB_NAME}
+    user: "1000"
     secrets:
       - influxdbtoken_telegraf
-      - mqtt_broker
       - mqtt_user
       - mqtt_pass
 
 secrets:
   influxdb_admin_token:
     file: ./secrets/influxdb_admin_token.env
-  influxdbtoken_telegraf:
-    file: ./secrets/influxdbtoken_telegraf.env
-  mqtt_broker:
-    file: ./secrets/mqtt_broker.env
   mqtt_user:
-    file: ./secrets/mqtt_user.env
+    environment: mqtt_user
   mqtt_pass:
-    file: ./secrets/mqtt_pass.env
+    environment: mqtt_pass
+  influxdbtoken_telegraf:
+    environment: influxdbtoken_telegraf
 ```
 In the ``telegraf.conf``:
 
@@ -153,4 +151,59 @@ In the ``telegraf.conf``:
 ## Ingest data
 
 For read and ingest data into influxdb database, is need to configure the ``[[inputs.mqtt_consumer]]`` on telegraf config file ``telegraf.conf``
+
+```toml
+[[outputs.influxdb_v2]]
+  urls = ["http://influxdb3-core:8181"]
+  token = "@{docker_store:influxdbtoken_telegraf}"
+  organization = "ignored"
+  bucket = "main"
+
+# Configuration of the host
+# [[inputs.cpu]]
+#   percpu = true
+#   totalcpu = true
+#   report_active = true
+
+# [[inputs.mem]]
+# [[inputs.disk]]
+# [[inputs.system]]
+
+# ************************************
+# MQTT CONSUMER
+# ************************************
+[[inputs.mqtt_consumer]]
+  ## MQTT broker URLs to be used. The format should be scheme://host:port,
+  ## schema can be tcp, ssl, or ws.
+  servers = ["${MQTT_BROKER}"]
+
+  ## Topics that will be subscribed to.
+  # topics = [
+  #   "pico02/temperature",
+  #   "pico02/humidity",
+  #   "pico02/pressure",
+  #   "pico02/cpu_temp"
+  # ]
+
+  # Topic DEV with lineprotocol
+  topics = ["pico01/#", "pico02/#"]
+
+  ## QoS policy for messages
+    # 0 = at most once
+  ##   1 = at least once
+  ##   2 = exactly once
+  ##
+  ## When using a QoS of 1 or 2, you should enable persistent_session to allow
+  ## resuming unacknowledged messages.
+  qos = 0
+
+  ## If unset, a random client ID will be generated.
+  # client_id = "telegraf-infra"
+
+  ## Username and password to connect MQTT server.
+  username = "@{docker_store:mqtt_user}"
+  password = "@{docker_store:mqtt_pass}"
+  data_format = "value"
+  data_type = "float"
+```
 

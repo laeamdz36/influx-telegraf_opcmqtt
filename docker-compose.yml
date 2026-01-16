@@ -36,8 +36,6 @@ services:
       - --object-store=file
       - --data-dir=/var/lib/influxdb3/data
       - --plugin-dir=/var/lib/influxdb3/plugins
-    # Volumenes bind, cambiar a tipo named
-    # para que asi docker los administre
     volumes:
       - influxdb3-data:/var/lib/influxdb3/data
       - influxdb3-plugins:/var/lib/influxdb3/plugins
@@ -63,7 +61,6 @@ services:
     container_name: telegraf
     environment:
       MQTT_BROKER: ${MQTT_BROKER_URL}
-      # Configuration output pluguin v2 to write on influxdb3
       INFLUX_SERVICE: influxdb3-core
       INFLUX_PORT: 8181
       DATABASE_NAME: ${INFLUX_DB_NAME}
