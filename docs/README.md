@@ -66,7 +66,7 @@ Where INFLUX_TOKEN is loaded from docker secrets
 
 ``telegraf.conf``
 
-```conf
+```toml
 [agent]
   interval = "3s"
   round_interval = true
@@ -84,10 +84,10 @@ To ingest data from MQTT broker use the input plugin
 
 #### Influxdb Explorer
 
-For configuration the explorer service, is need to mount a ``config.json`` file`in
+For configuration the explorer service, is need to mount a ``config.json`` file in
 the directory ``influxdb\config``
 
-```config.json``
+``config.json``
 
 ```json
 {
@@ -96,6 +96,58 @@ the directory ``influxdb\config``
     "DEFAULT_API_TOKEN": "the_token_configured_also_for_influxdb3_service",
     "DEFAULT_SERVER_NAME": "Local InfluxDB 3"
 }
+```
+
+#### Docker secrets with telegraf plugin
+
+References:
+[Telegraf Docker Secrets](https://www.influxdata.com/blog/storing-secrets-telegraf/)
+
+To use docker secrets directly in the ``telegraf.conf`` file is needed to configure the plugin ``[[secretstores.docker]]``
+
+Configure the plugin with the basic config:
+
+```toml
+[[secretstores.docker]]
+  id = "docker_store"
+```
+
+Next use the secrets configured in th docker compose:
+
+```yml
+  telegraf:
+    image: telegraf:1.36.3
+    container_name: telegraf
+    environment:
+      MQTT_BROKER: ${MQTT_BROKER_URL}
+      # Configuration output pluguin v2 to write on influxdb3
+      INFLUX_SERVICE: influxdb3-core
+      INFLUX_PORT: 8181
+      DATABASE_NAME: ${INFLUX_DB_NAME}
+    secrets:
+      - influxdbtoken_telegraf
+      - mqtt_broker
+      - mqtt_user
+      - mqtt_pass
+
+secrets:
+  influxdb_admin_token:
+    file: ./secrets/influxdb_admin_token.env
+  influxdbtoken_telegraf:
+    file: ./secrets/influxdbtoken_telegraf.env
+  mqtt_broker:
+    file: ./secrets/mqtt_broker.env
+  mqtt_user:
+    file: ./secrets/mqtt_user.env
+  mqtt_pass:
+    file: ./secrets/mqtt_pass.env
+```
+In the ``telegraf.conf``:
+
+```toml
+[[outputs.influxdb_v2]]
+  urls = ["http://influxdb3-core:8181"]
+  token = "@{docker_store:influxdbtoken_telegraf}"
 ```
 
 ## Ingest data

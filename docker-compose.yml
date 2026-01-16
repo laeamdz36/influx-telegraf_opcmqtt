@@ -43,11 +43,11 @@ services:
     networks:
       - iot-network
 
+# command: >
+# sh -c "export INFLUXDB_TOKEN=$(cat /run/secrets/influxdbtoken_telegraf) && exec telegraf"
   telegraf:
     image: telegraf:1.36.3
     container_name: telegraf
-    command: >
-      sh -c "export INFLUXDB_TOKEN=$(cat /run/secrets/influxdbtoken_telegraf) && exec telegraf"
     environment:
       MQTT_BROKER: ${MQTT_BROKER_URL}
       # Configuration output pluguin v2 to write on influxdb3
