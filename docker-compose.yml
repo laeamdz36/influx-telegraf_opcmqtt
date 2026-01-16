@@ -97,6 +97,6 @@ secrets:
   mqtt_broker:
     file: ./secrets/mqtt_broker.env
   mqtt_user:
-    file: ./secrets/mqtt_user.env
+    file: ./secrets/mqtt_user.txt
   mqtt_pass:
-    file: ./secrets/mqtt_pass.env
+    file: ./secrets/mqtt_pass.txt
