@@ -70,19 +70,19 @@ services:
     secrets:
       - source: influxdbtoken_telegraf
         target: influxdbtoken_telegraf
-        uid: "999"
-        gid: "999"
+        uid: "1000"
+        gid: "1000"
         mode: 0440
       - source: mqtt_user
         target: mqtt_user
-        uid: "999"
-        gid: "999"
+        uid: "1000"
+        gid: "1000"
         mode: 0440
       - mqtt_broker
       - source: mqtt_pass
         target: mqtt_pass
-        uid: "999"
-        gid: "999"
+        uid: "1000"
+        gid: "1000"
         mode: 0440
     user: ${USERID}
     volumes:
