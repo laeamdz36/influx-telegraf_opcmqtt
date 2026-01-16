@@ -1,6 +1,21 @@
 name: Influx3_Telegraf
 services:
 
+  influxdb3-init:
+    image: influxdb:3.6.0-core
+    container_name: influxdb3-init
+    user: root
+    command:
+      - sh
+      - -c
+      - |
+        mkdir -p /var/lib/influxdb3/data /var/lib/influxdb3/plugins && \
+        chown -R influxdb3:influxdb3 /var/lib/influxdb3
+    volumes:
+      - influxdb3-data:/var/lib/influxdb3/data
+      - influxdb3-plugins:/var/lib/influxdb3/plugins
+    restart: "no"
+
   influxdb3-core:
     container_name: influxdb3-core
     image: influxdb:3.6.0-core
@@ -10,6 +25,10 @@ services:
       - INFLUXDB3_ADMIN_TOKEN_FILE=run/secrets/influxdb_admin_token
       - INFLUXDB3_DATABASE_NAME=${INFLUX_DB_NAME}
       - TZ=America/Mexico_City
+    depends_on:
+      influxdb3-init:
+        condition: service_completed_successfully
+    user: influxdb3
     command:
       - influxdb3
       - serve
