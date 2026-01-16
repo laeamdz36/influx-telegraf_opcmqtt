@@ -29,6 +29,7 @@ services:
       influxdb3-init:
         condition: service_completed_successfully
     user: influxdb3
+    restart: unless-stopped
     command:
       - influxdb3
       - serve
@@ -73,7 +74,7 @@ services:
       - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
     depends_on:
       - influxdb3-core
-    restart: always
+    restart: unless-stopped
     networks:
       - iot-network
 
