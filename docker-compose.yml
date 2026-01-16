@@ -68,9 +68,9 @@ services:
       INFLUX_PORT: 8181
       DATABASE_NAME: ${INFLUX_DB_NAME}
     secrets:
-      - influxdbtoken_telegraf
       - mqtt_user
       - mqtt_pass
+      - influxdbtoken_telegraf
     user: "1000"
     volumes:
       - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
@@ -91,9 +91,9 @@ volumes:
 secrets:
   influxdb_admin_token:
     file: ./secrets/influxdb_admin_token.env
-  influxdbtoken_telegraf:
-    environment: ./secrets/influxdbtoken_telegraf.env
   mqtt_user:
-    environment: ./secrets/mqtt_user.env
+    environment: mqtt_user
   mqtt_pass:
-    environment: ./secrets/mqtt_pass.env
+    environment: mqtt_pass
+  influxdbtoken_telegraf:
+    environment: influxdbtoken_telegraf
