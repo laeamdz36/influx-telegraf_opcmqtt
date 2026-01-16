@@ -72,7 +72,6 @@ services:
       - mqtt_broker
       - mqtt_user
       - mqtt_pass
-    user: ${USERID}
     volumes:
       - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
     depends_on:
@@ -97,6 +96,6 @@ secrets:
   mqtt_broker:
     file: ./secrets/mqtt_broker.env
   mqtt_user:
-    file: ./secrets/mqtt_user.txt
+    file: ./secrets/mqtt_user.env
   mqtt_pass:
-    file: ./secrets/mqtt_pass.txt
+    file: ./secrets/mqtt_pass.env
