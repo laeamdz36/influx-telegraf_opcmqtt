@@ -72,7 +72,7 @@ services:
       - mqtt_broker
       - mqtt_user
       - mqtt_pass
-    user: "${USERID}"
+    user: ${USERID}
     volumes:
       - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
     depends_on:
