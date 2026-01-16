@@ -72,10 +72,6 @@ networks:
   iot-network:
     driver: bridge
 
-volumes:
-  grafana-data:
-
-
 secrets:
   influxdb_admin_token:
     file: ./secrets/influxdb_admin_token.env
