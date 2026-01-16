@@ -92,8 +92,8 @@ secrets:
   influxdb_admin_token:
     file: ./secrets/influxdb_admin_token.env
   influxdbtoken_telegraf:
-    file: ./secrets/influxdbtoken_telegraf.env
+    environment: ./secrets/influxdbtoken_telegraf.env
   mqtt_user:
-    file: ./secrets/mqtt_user.txt
+    environment: ./secrets/mqtt_user.env
   mqtt_pass:
-    file: ./secrets/mqtt_pass.txt
+    environment: ./secrets/mqtt_pass.env
