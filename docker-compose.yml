@@ -72,8 +72,8 @@ services:
       - mqtt_broker
       - mqtt_user
       - mqtt_pass
+    user: "${USERID}"
     volumes:
-    # Mount configuration file
       - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
     depends_on:
       - influxdb3-core
