@@ -1,28 +1,5 @@
-name: Influx3_Grafana_Telegraf
+name: Influx3_Telegraf
 services:
-  grafana:
-    image: grafana/grafana:main-ubuntu
-    container_name: grafana_service
-    restart: unless-stopped
-    ports:
-      - '3000:3000'
-    environment:
-        # This settigns will override the conf/grafana.ini
-      - GF_DEFAULT_INSTANCE_NAME=GF_Main
-      - GF_SECURITY_ADMIN_USER__FILE=/run/secrets/grafana_admin_user
-      - GF_SECURITY_ADMIN_PASSWORD__FILE=/run/secrets/grafana_admin_password
-      - API_TOKEN__FILE=/run/secrets/influxdb_admin_token
-    volumes:
-      - grafana-data:/var/lib/grafana
-      - ./grafana/provisioning/:/etc/grafana/provisioning/
-    secrets:
-      - grafana_admin_user
-      - grafana_admin_password
-      - influxdb_admin_token
-    depends_on:
-      - influxdb3-core
-    networks:
-      - iot-network
 
   influxdb3-core:
     container_name: influxdb3-core
@@ -32,6 +9,7 @@ services:
     environment:
       - INFLUXDB3_ADMIN_TOKEN_FILE=run/secrets/influxdb_admin_token
       - INFLUXDB3_DATABASE_NAME=${INFLUX_DB_NAME}
+      - TZ=America/Mexico_City
     command:
       - influxdb3
       - serve
@@ -76,20 +54,16 @@ services:
       INFLUX_SERVICE: influxdb3-core
       INFLUX_PORT: 8181
       DATABASE_NAME: ${INFLUX_DB_NAME}
-      # INFLUXDB_TOKEN: "apiv3_copperAplhaBravoRomeLima366!"
-      # For reading secrets from docker secrets telegraf use plugin
-      # secretstores.docker
     secrets:
       - influxdbtoken_telegraf
       - mqtt_broker
       - mqtt_user
+      - mqtt_pass
     volumes:
-    # Mount configurastion file
+    # Mount configuration file
       - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
     depends_on:
       - influxdb3-core
-      # influxdb2:
-      #   condition: service_healthy
     restart: always
     networks:
       - iot-network
@@ -103,10 +77,6 @@ volumes:
 
 
 secrets:
-  grafana_admin_user:
-    file: ./secrets/grafana_admin_user.env
-  grafana_admin_password:
-    file: ./secrets/grafana_admin_password.env
   influxdb_admin_token:
     file: ./secrets/influxdb_admin_token.env
   influxdbtoken_telegraf:

@@ -1,72 +1,104 @@
-## Influx DB - Line Protocol (Se utilizara Influx DB 3 Core)
+# Main Description
 
-General structure:
-> measurement, tag_set field_set timestamp
+The Compose is integrated by 3 services:
+1. Influxdb3 Core
+2. Telegraf
+3. Influxdb Explorer
 
-    - Measurement: The name of the metric or table
-    - tag_set: A set of tags key-value to index the values
-    - filed_set: The set of values or data that is being measured
-    - timestamp: The date and time of the data in Unix format in nanoseconds
+``Influexdb3 Core:`` Is the main time series database 
+``Telegraf:`` Is a plugin for influxdb 3 core to ingest data from different data sources, for this deployment
+MQTT input plugin will be deployed to perform a connection to a MQTT Broker built in Home Assistant.
+``Influxdb Explorer:`` is a web graphical user interfaz to monitor and manage the influxdb3 core database.
 
-| Concepto  | InfluxDB 2.x | InfluxDB 3.x    |
-| --------- | ------------ | --------------- |
-| Bucket    | bucket       | database        |
-| DB-Engine | TSM          | Arrow / Parquet |
-| Query     | Flux / SQL   | ANSI SQL        |
+## Main issues to solve
 
-influxdb 3 core utiliza SQL, de esta forma onoo tendriamos que aprender un nuevo lenguaje
-para el caso si ya conocemos SQL
+1. The data format from the source in this case Home assistan MQTT Broker Mosquitto.
+2. Flexible way to provisioning the token key to influxdb3 core, in order to write data from telegraf.
+3. Flexible way to define and estabish the token to telegraf to link to the corresponding influxdb database.
+4. Volume type for each service in order to perform backups and restore.
 
-## Docker compose file
+## Config files
 
-Docker compose file will export the needed variables for the telegraf.config file from the
-``.env`` file
+There is initial config files
 
-> Variables
-    - INFLUXDB_INIT_MODE=setup # Mode needed to init influxdb instance with initial settings
-    - INFLUXDB_INIT_ORG=MyOrg # Organization for set influxdb
-    - INFLUXDB_INIT_BUCKET=MyInitialBucket # initial bucket name
-    - MQTT_BROKER_URL=tcp://192.168.0.1:1883 # the ip for the MQTT Broker
+``.env`` file is used to load during the running docker compose enviroment variables
+used to set particular configs in each service
 
+``secrets/`` directory to put all secrets files with extension ``.env`` to be loaded
+by docker compose.
 
-## Notas de desarrollo
+``influxdb\config`` directory to config settings for telegraf to achive data writing to influxdb3 core database.
 
-2025/11/10
-Se realizaron pruebas con los contenedores de influxdb3 core u su contenedor explroer
-que es el UI web para administrar la instancia de influxdb3 core
+#### Influxdb3 Core Service
 
-Referencias a el explorer
+Config variables needed:
+INFLUX_DB_NAME: The database name
 
-[InfluxDb3 Core Explorer](https://docs.influxdata.com/influxdb3/explorer/)
+##### The token for Influxdb3 Core
 
-1. Se llevo a cabo la generacion manual del token de InfluxDB3 core con la linea:
+To define a initial admin token for influxdb3 core, is possibel and maintaining
+security with the docker secrets, thus, creating a file with the initial admin token 
+like this:
 
-```bash
-docker exec -it <Name_of_the_service_InfluxDB3> influxdb3 create token --admin
+``expiry_millis:`` Unix time in miliseconds.
+
+```json
+{
+  "token": "put_here_the_initial_admin_token!",
+  "name": "init-admin-token",
+  "expiry_millis": 1857580146000
+}
+```
+Write this lines of code into a file with a name to be used in docker compose secrets for influxdb3 core service.
+
+#### Telegraf config to write Influxdb3 Core
+
+Within the directory ``telegraf\`` the ``telegraf.conf`` is configured to be loaded into telegraf service, the directory is mount in a volume as described next:
+
+```yml
+volumes:
+    # Mount configuration file
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
 ```
 
-example:
-```bash
-docker exec -it <influxdb3_core> influxdb3 create token --admin
+The basic configuration needed to write into the database is:
+Where INFLUX_TOKEN is loaded from docker secrets
+
+``telegraf.conf``
+
+```conf
+[agent]
+  interval = "3s"
+  round_interval = true
+
+[[outputs.influxdb_v2]]
+  urls = ["http://influxdb3-core:8181"]
+  token = "${INFLUXDB_TOKEN}"
+  organization = "ignored"
+  bucket = "main"
 ```
 
-### Description for lñine protocol to write data in InfluxDB3
+To ingest data from MQTT broker use the input plugin
 
-- Table: A string that identifies the table to store data in
-- tag set: Comma-delimited list of key value pairs, each representing a tag
-- field set: Key-value pairs between the first and second unscaped whitespaces
-- timestamp: Integer value after the second unescaped whitespace
+``[[inputs.mqtt_consumer]]``
 
-> myTable,tag1=val1,tag2=val2 field1="v1",field2=1i 0000000000000000000
+#### Influxdb Explorer
 
-example:
+For configuration the explorer service, is need to mount a ``config.json`` file`in
+the directory ``influxdb\config``
+
+```config.json``
+
+```json
+{
+    "DEFAULT_INFLUX_SERVER": "http://influxdb3-core:8181",
+    "DEFAULT_INFLUX_DATABASE": "main",
+    "DEFAULT_API_TOKEN": "the_token_configured_also_for_influxdb3_service",
+    "DEFAULT_SERVER_NAME": "Local InfluxDB 3"
+}
 ```
-Table: home
-- tags
-  - room: Living Room or Kitchen
-- fields
-    temp: temperature in °C (float)
-    hum: percent humidity (float)
-    co: carbon monoxide in parts per million (integer)
-timestamp: Unix timestamp in second precision
-```
+
+## Ingest data
+
+For read and ingest data into influxdb database, is need to configure the ``[[inputs.mqtt_consumer]]`` on telegraf config file ``telegraf.conf``
+
