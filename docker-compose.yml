@@ -1,5 +1,26 @@
-name: Influx3_Telegraf
+name: ITG-Project
 services:
+
+  grafana:
+    image: grafana/grafana:main-ubuntu
+    container_name: grafana_main
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+        # This settigns will override th conf/grafana.ini
+      - TZ=America/Mexico_City
+      - GF_DEFAULT_INSTANCE_NAME=${INSTANCE_NAME}
+      - GF_SECURITY_ADMIN_USER=${ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - INFLUX_API_TOKEN=${GF_API_TOKEN}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
+    depends_on:
+      - influxdb3-core
+    networks:
+      - iot-network
 
   influxdb3-init:
     image: influxdb:3.6.0-core
@@ -65,10 +86,14 @@ services:
       INFLUX_SERVICE: influxdb3-core
       INFLUX_PORT: 8181
       DATABASE_NAME: ${INFLUX_DB_NAME}
-    secrets:
-      - mqtt_user
-      - mqtt_pass
-      - influxdbtoken_telegraf
+      MQTT_USER: ${MQTT_USER}
+      MQTT_PASS: ${MQTT_PASS}
+      INFLUX_TOKEN: ${INFLUXDBTOKEN_TELEGRAF_API}
+    # for dev avoid secrets use direct env variables
+    # secrets:
+    #   - mqtt_user
+    #   - mqtt_pass
+    #   - influxdbtoken_telegraf
     user: "1000"
     volumes:
       - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
@@ -85,13 +110,14 @@ networks:
 volumes:
   influxdb3-data:
   influxdb3-plugins:
+  grafana-data:
 
 secrets:
   influxdb_admin_token:
     file: ./secrets/influxdb_admin_token.env
-  mqtt_user:
-    environment: mqtt_user
-  mqtt_pass:
-    environment: mqtt_pass
-  influxdbtoken_telegraf:
-    environment: influxdbtoken_telegraf
+  # mqtt_user:
+  #   environment: mqtt_user
+  # mqtt_pass:
+  #   environment: mqtt_pass
+  # influxdbtoken_telegraf:
+  #   environment: influxdbtoken_telegraf
