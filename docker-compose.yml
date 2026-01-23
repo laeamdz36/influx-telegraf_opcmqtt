@@ -1,4 +1,4 @@
-name: ITG-Project
+name: Influx3_Telegraf
 services:
 
   grafana:
