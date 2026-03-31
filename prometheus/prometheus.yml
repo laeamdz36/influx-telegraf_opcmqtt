@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+scrape_configs:
+- job_name: py_telebot
+  honor_timestamps: true
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  metrics_path: /metrics
+  scheme: http
+  static_configs:
+  - targets:
+    - 192.168.10.115:9182
+
+    # 98bb0326-b055-4f88-9235-3a7be3d3ee8f
+    # monitoring@pve@pve!prometheus
+
+    # 98bb0326-b055-4f88-9235-3a7be3d3ee8f

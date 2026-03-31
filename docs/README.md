@@ -5,6 +5,11 @@ The Compose is integrated by 3 services:
 2. Telegraf
 3. Influxdb Explorer
 
+# HiveMQ
+```bash
+docker run --name hivemq-edge -d -p 1883:1883 -p 8080:8080 hivemq/hivemq-edge
+```
+
 ``Influexdb3 Core:`` Is the main time series database 
 ``Telegraf:`` Is a plugin for influxdb 3 core to ingest data from different data sources, for this deployment
 MQTT input plugin will be deployed to perform a connection to a MQTT Broker built in Home Assistant.

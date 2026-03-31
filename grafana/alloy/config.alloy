@@ -1,0 +1,71 @@
+// discovery.docker discovers Docker Engine containers and exposes them as targets
+// discovery.docker "<LABEL>" {
+//   host = "<DOCKER_ENGINE_HOST>"
+// }
+discovery.docker "linux" {
+  host = "unix:///var/run/docker.sock"
+}
+
+// loki.source.docker "containers" {
+//   host = "unix:///var/run/docker.sock"
+//   refresh_interval = "5s"
+
+//   labels = {"app" = "docker"}
+
+//   forward_to = [loki.write.local.receiver]
+//   targets = discovery.docker.linux.targets
+// }
+
+loki.source.docker "fastaip" {
+
+  host = "unix:///var/run/docker.sock"
+  // refresh_interval = "5s"
+
+  // relabel {
+  //   source_labels = ["__meta_docker_container_label_app"]
+  //   regex         = "telegram_sender"
+  //   action        = "keep"
+  // }
+
+  labels = {
+    job = "fastapi",
+  }
+  targets = discovery.docker.linux.targets
+  // forward_to = [loki.write.local.receiver]
+  forward_to = [loki.process.json.receiver]
+}
+
+// prometheus.scrape configures a Prometheus scraping job for a given set of targets. 
+// The scraped metrics are forwarded to the list of receivers passed in forward_to
+// prometheus.scrape "python_app" {
+//   targets    = [{{"__address__" = "localhost:8036"}}]
+//   forward_to = [loki.write.local.receiver]
+//   scrape_interval = "10s"
+//   metrics_path    = "/metrics"
+// }
+
+loki.process "json" {
+  stage.json {
+    expressions = {
+      level   = "levelname",
+      logger  = "name",
+      msg     = "message",
+      pid     = "process",
+    }
+  }
+
+  stage.labels {
+    values = {
+      level  = "level",
+      logger = "logger",
+    }
+  }
+
+  forward_to = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

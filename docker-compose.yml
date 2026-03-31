@@ -22,6 +22,8 @@ services:
     networks:
       - iot-network
 
+  
+
   influxdb3-init:
     image: influxdb:3.6.0-core
     container_name: influxdb3-init
@@ -99,6 +101,17 @@ services:
       - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
     depends_on:
       - influxdb3-core
+    restart: unless-stopped
+    networks:
+      - iot-network
+
+  prometheus_main:
+    image: prom/prometheus:v2.45.0
+    container_name: prometheus_main
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
     restart: unless-stopped
     networks:
       - iot-network
