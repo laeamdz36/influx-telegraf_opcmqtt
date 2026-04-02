@@ -81,7 +81,10 @@ services:
       - iot-network
 
   telegraf:
-    image: telegraf:1.36.3
+    build:
+      context: ./telegraf
+      dockerfile: Dockerfile
+    image: telegraf:1.36.3-custom
     container_name: telegraf
     environment:
       MQTT_BROKER: ${MQTT_BROKER_URL}
@@ -97,6 +100,8 @@ services:
     #   - mqtt_pass
     #   - influxdbtoken_telegraf
     user: "1000"
+    cap_add:
+      - NET_RAW
     volumes:
       - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
     depends_on:
