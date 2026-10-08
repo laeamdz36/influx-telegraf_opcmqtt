@@ -212,3 +212,64 @@ For read and ingest data into influxdb database, is need to configure the ``[[in
   data_type = "float"
 ```
 
+## Known issues
+
+## Troubleshooting: InfluxDB 3 Core WAL Crash After Power Outage
+
+### Symptom
+After an abrupt power outage (blackout), the `influxdb3-core` container crashes or fails to start, showing an error related to existing or invalid Write-Ahead Log (WAL) files:
+
+\`\`\`text
+ERROR influxdb3_wal::object_store: invoking shutdown after attempt to persist a WAL file that already exists on the object store path="/var/lib/influxdb3/data/node0/wal/00000014590.wal" source=Os { code: 17, kind: AlreadyExists, message: "File exists" }
+\`\`\`
+
+### Cause
+An unexpected power loss interrupted active write operations, leaving zero-byte (empty/corrupt) WAL files or conflicting sequence files in the Docker volume. This prevents the database engine from loading its index and starting properly.
+
+### Workaround / Solution
+
+If Docker is managed via Snap, the volume data resides under the system path. Locate and remove the zero-byte files causing the conflict:
+
+1. **Stop the InfluxDB container:**
+   ```bash
+   docker compose stop influxdb3-core
+   ```
+
+2. **Find any zero-byte files inside the volume data path:**
+   ```bash
+   sudo find /var/snap/docker/common/var-lib-docker/volumes/influx3_telegraf_influxdb3-data/_data \
+     -type f -size 0 -ls
+   ```
+   *(Verification: The command will list the specific `.wal` files that were left at 0 bytes during the blackout).*
+
+3. **Remove the conflicting or empty WAL files:**
+   ```bash
+   sudo rm /var/snap/docker/common/var-lib-docker/volumes/influx3_telegraf_influxdb3-data/_data/node0/wal/00000014590.wal
+   sudo rm /var/snap/docker/common/var-lib-docker/volumes/influx3_telegraf_influxdb3-data/_data/node0/wal/00000014591.wal
+   sudo rm /var/snap/docker/common/var-lib-docker/volumes/influx3_telegraf_influxdb3-data/_data/node0/wal/00000014592.wal
+   ```
+   *(Adjust file names based on what the `find` command returned in step 2).*
+
+4. **Restart the container:**
+   ```bash
+   docker compose up -d influxdb3-core
+   ```
+   *(Verification: Run `docker compose logs -f influxdb3-core` to confirm that the engine starts successfully without errors).*
+
+---
+
+```bash
+sudo ls -lah /var/snap/docker/common/var-lib-docker/volumes/influx3_telegraf_influxdb3-data/_data
+
+sudo find /var/snap/docker/common/var-lib-docker/volumes/influx3_telegraf_influxdb3-data/_data   -type f -printf '%s bytes\t%p\n' | sort -n
+
+sudo find /var/snap/docker/common/var-lib-docker/volumes/influx3_telegraf_influxdb3-data/_data   -type f -size 0 -ls
+
+docker run --rm -it -v influx3_telegraf_influxdb3-data:/data alpine sh
+
+
+sudo find /var/snap/docker/common/var-lib-docker/volumes/influx3_telegraf_influxdb3-data/_data \
+-type f -size 0 -ls
+
+sudo rm /var/snap/docker/common/var-lib-docker/volumes/influx3_telegraf_influxdb3-data/_data/node0/wal/00000014591.wal
+```
