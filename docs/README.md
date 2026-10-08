@@ -256,6 +256,35 @@ If Docker is managed via Snap, the volume data resides under the system path. Lo
    ```
    *(Verification: Run `docker compose logs -f influxdb3-core` to confirm that the engine starts successfully without errors).*
 
+### Automatic cleanup (`influxdb3-init`)
+
+The manual steps above are automated by the script ``influxdb/scripts/clean-wal.sh``, which the
+``influxdb3-init`` service runs before fixing permissions. Since ``influxdb3-core`` depends on
+``influxdb3-init`` with ``condition: service_completed_successfully``, the database only starts
+after the cleanup finishes without errors.
+
+What the script does:
+- Looks only at ``*.wal`` files of 0 bytes in ``<data-dir>/<node-id>/wal`` (no subdirectories, no other file types).
+- Uses the path **inside the container** (``/var/lib/influxdb3/data``), not the host path under ``/var/snap/docker/...``.
+- Logs every removed file with a ``[clean-wal]`` prefix.
+- Exits with an error if something fails, so ``influxdb3-core`` does not start on top of corrupt data.
+
+Configuration (``.env``):
+
+| Variable | Default | Description |
+|---|---|---|
+| ``INFLUX_NODE_ID`` | ``node0`` | Node id shared by the script and ``influxdb3 serve --node-id`` |
+| ``WAL_CLEAN_DRY_RUN`` | ``false`` | ``true`` only lists the files that would be removed |
+
+Check the result:
+```bash
+docker compose logs influxdb3-init
+```
+
+Notes:
+- ``.gitattributes`` forces LF line endings for ``*.sh``; with CRLF (Windows checkout) bash fails with ``$'\r': command not found``.
+- **Limitation:** ``influxdb3-init`` only runs on ``docker compose up``. After a host reboot (e.g. a blackout) Docker restarts ``influxdb3-core`` directly through its ``restart: unless-stopped`` policy, without running the init service, so in that case the cleanup does not happen and the manual steps above are still needed.
+
 ---
 
 ```bash

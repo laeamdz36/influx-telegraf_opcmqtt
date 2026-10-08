@@ -1,0 +1,2 @@
+# Los scripts se ejecutan dentro de contenedores Linux: forzar LF aunque se clone en Windows.
+*.sh text eol=lf
