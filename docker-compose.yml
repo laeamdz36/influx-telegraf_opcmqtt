@@ -28,22 +28,15 @@ services:
     image: influxdb:3.6.0-core
     container_name: influxdb3-init
     user: root
-    environment:
-      - INFLUXDB3_DATA_DIR=/var/lib/influxdb3/data
-      - INFLUXDB3_NODE_ID=${INFLUX_NODE_ID:-node0}
-      - WAL_CLEAN_DRY_RUN=${WAL_CLEAN_DRY_RUN:-false}
-    # Limpia WAL de 0 bytes (corte de energia) antes de que arranque influxdb3-core
     command:
-      - bash
+      - sh
       - -c
       - |
-        bash /usr/local/bin/clean-wal.sh && \
         mkdir -p /var/lib/influxdb3/data /var/lib/influxdb3/plugins && \
         chown -R influxdb3:influxdb3 /var/lib/influxdb3
     volumes:
       - influxdb3-data:/var/lib/influxdb3/data
       - influxdb3-plugins:/var/lib/influxdb3/plugins
-      - ./influxdb/scripts/clean-wal.sh:/usr/local/bin/clean-wal.sh:ro
     restart: "no"
 
   influxdb3-core:
@@ -55,21 +48,29 @@ services:
       - INFLUXDB3_ADMIN_TOKEN_FILE=run/secrets/influxdb_admin_token
       - INFLUXDB3_DATABASE_NAME=${INFLUX_DB_NAME}
       - TZ=America/Mexico_City
+      - INFLUXDB3_DATA_DIR=/var/lib/influxdb3/data
+      - INFLUXDB3_NODE_ID=${INFLUX_NODE_ID:-node0}
+      - WAL_CLEAN_DRY_RUN=${WAL_CLEAN_DRY_RUN:-false}
     depends_on:
       influxdb3-init:
         condition: service_completed_successfully
     user: influxdb3
     restart: unless-stopped
+    # Limpia WAL de 0 bytes (corte de energia) en CADA arranque, incluidos los
+    # reinicios automaticos tras reboot del host; exec deja a influxdb3 como PID 1.
+    entrypoint: ["bash", "-c"]
     command:
-      - influxdb3
-      - serve
-      - --node-id=${INFLUX_NODE_ID:-node0}
-      - --object-store=file
-      - --data-dir=/var/lib/influxdb3/data
-      - --plugin-dir=/var/lib/influxdb3/plugins
+      - |
+        bash /usr/local/bin/clean-wal.sh && \
+        exec influxdb3 serve \
+          --node-id=${INFLUX_NODE_ID:-node0} \
+          --object-store=file \
+          --data-dir=/var/lib/influxdb3/data \
+          --plugin-dir=/var/lib/influxdb3/plugins
     volumes:
       - influxdb3-data:/var/lib/influxdb3/data
       - influxdb3-plugins:/var/lib/influxdb3/plugins
+      - ./influxdb/scripts/clean-wal.sh:/usr/local/bin/clean-wal.sh:ro
     secrets:
       - influxdb_admin_token
     networks:
